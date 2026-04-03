@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Web Dashboard</title>
+    <!-- Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Main Style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="glow-orb top-left"></div>
+    <div class="glow-orb bottom-right"></div>
+
+    <div class="dashboard-container">
+        <header>
+            <div class="icon-container">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19.38 6.99998C19.38 6.99998 17.51 4.97998 14.81 4.54998C14.81 4.54998 14.54 5.04998 14.37 5.51998C11.51 5.09998 8.44001 5.09998 5.62001 5.51998C5.45001 5.04998 5.17001 4.54998 5.17001 4.54998C2.47001 4.97998 0.600006 6.99998 0.600006 6.99998C-2.58999 13.06 1.83 20.35 1.83 20.35C4.33 22.18 7.37 22.5 7.37 22.5L8.41 21.23C6.73 20.73 5.41 19.8 5.41 19.8C5.41 19.8 5.83 19.54 6.2 19.28C9.52 20.84 12.39 20.72 13.91 20.25C14.15 20.17 14.39 20.08 14.62 19.98C14.81 19.89 15 19.8 15.19 19.72C15.89 19.46 16.53 19.14 17.13 18.78C17.39 18.63 17.65 18.47 17.9 18.31C18.15 18.15 18.41 17.97 18.67 17.79C18.67 17.79 17.35 18.74 15.65 19.24L16.68 20.51C16.68 20.51 19.66 20.19 22.14 18.36C22.14 18.36 26.63 10.96 19.38 6.99998ZM7.92001 15.62C6.70001 15.62 5.71001 14.51 5.71001 13.15C5.71001 11.79 6.70001 10.68 7.92001 10.68C9.14001 10.68 10.15 11.79 10.13 13.15C10.13 14.51 9.14001 15.62 7.92001 15.62ZM16.05 15.62C14.83 15.62 13.84 14.51 13.84 13.15C13.84 11.79 14.83 10.68 16.05 10.68C17.27 10.68 18.28 11.79 18.26 13.15C18.26 14.51 17.27 15.62 16.05 15.62Z" fill="currentColor"/>
+                </svg>
+            </div>
+            <div class="header-titles">
+                <h1>Discord Bot Setup</h1>
+                <p>Configure credentials and preferences dynamically.</p>
+            </div>
+        </header>
+
+        <form id="config-form">
+            <div class="form-group row">
+                <div class="input-wrapper full">
+                    <label for="usertoken">User Token</label>
+                    <input type="password" id="usertoken" name="usertoken" placeholder="MTQwMT..." required>
+                    <small>We encrypt your token in transit to save it securely.</small>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <div class="input-wrapper half">
+                    <label for="guild_id">Guild ID</label>
+                    <input type="text" id="guild_id" name="guild_id" placeholder="1065622811..." required>
+                </div>
+                <div class="input-wrapper half">
+                    <label for="channel_id">Channel ID</label>
+                    <input type="text" id="channel_id" name="channel_id" placeholder="14895351..." required>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <div class="input-wrapper full">
+                    <label for="status">Presence Status</label>
+                    <select id="status" name="status">
+                        <option value="online">Online</option>
+                        <option value="idle">Idle</option>
+                        <option value="dnd">Do Not Disturb</option>
+                        <option value="invisible">Invisible</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group toggles-row">
+                <label class="toggle-container">
+                    <input type="checkbox" id="self_mute" name="self_mute">
+                    <div class="toggle-slider"></div>
+                    <span class="toggle-label-text">Mute Microphone</span>
+                </label>
+                <label class="toggle-container">
+                    <input type="checkbox" id="self_deaf" name="self_deaf">
+                    <div class="toggle-slider"></div>
+                    <span class="toggle-label-text">Deafen Audio</span>
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <span id="toast-message" class="toast hidden"></span>
+                <button type="submit" id="save-btn" class="primary-button">
+                    <span class="btn-text">Save Configuration</span>
+                    <div class="spinner hidden" id="loading-spinner"></div>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // Load initial config
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/config');
+                const config = await res.json();
+                
+                document.getElementById('usertoken').value = config.usertoken || '';
+                document.getElementById('guild_id').value = config.guild_id || '';
+                document.getElementById('channel_id').value = config.channel_id || '';
+                document.getElementById('status').value = config.status || 'online';
+                document.getElementById('self_mute').checked = config.self_mute === true;
+                document.getElementById('self_deaf').checked = config.self_deaf === true;
+            } catch (err) {
+                console.error("Failed to load config:", err);
+            }
+        });
+
+        // Save config
+        document.getElementById('config-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btnText = document.querySelector('.btn-text');
+            const spinner = document.getElementById('loading-spinner');
+            const toast = document.getElementById('toast-message');
+            
+            // UI Loading state
+            btnText.classList.add('hidden');
+            spinner.classList.remove('hidden');
+            
+            const data = {
+                usertoken: document.getElementById('usertoken').value,
+                guild_id: document.getElementById('guild_id').value,
+                channel_id: document.getElementById('channel_id').value,
+                status: document.getElementById('status').value,
+                self_mute: document.getElementById('self_mute').checked,
+                self_deaf: document.getElementById('self_deaf').checked
+            };
+
+            try {
+                const response = await fetch('/api/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    showToast('Configuration Saved!', 'success');
+                } else {
+                    showToast('Failed to save configuration.', 'error');
+                }
+            } catch (err) {
+                showToast('Server error.', 'error');
+            } finally {
+                // UI Restore state
+                btnText.classList.remove('hidden');
+                spinner.classList.add('hidden');
+            }
+        });
+
+        function showToast(message, type) {
+            const toast = document.getElementById('toast-message');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            setTimeout(() => {
+                toast.className = 'toast hidden';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
